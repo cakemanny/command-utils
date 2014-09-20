@@ -14,8 +14,8 @@ public interface App {
 
 
     /**
+     * The main method of the app.
      * This is run after all of the options are processed!
-     * The main method of the app
      */
     abstract public void main();
 
@@ -50,16 +50,19 @@ public interface App {
     }
 
     public static void main(String[] args) {
-        if (System.getProperty("prog.name") == null || System.getProperty("prog.className") == null) {
-            System.err.println("Warning!: prog.name or prog.className system properties are not set!!");
-        }
         try {
             AppState.args = args;
             AppState.getOption = Options.getOption(args);
 
             // instantiate App instance
-            App app = (App) Class.forName(
-                    System.getProperty("prog.className")).newInstance();
+            String classNameProp = System.getProperty("prog.className");
+            String className = (classNameProp != null)
+                ? classNameProp
+                : Scanner.appClassName();
+            App app = (App) Class.forName(className).newInstance();
+            if (System.getProperty("prog.name") == null) {
+                System.setProperty("prog.name", app.getClass().getSimpleName());
+            }
             if (Arrays.asList(args).contains("--help")) {
                 app.printUsageAndExit(0);
             }

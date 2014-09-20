@@ -31,13 +31,17 @@
             <compilerarg value="-Xlint:all"/>
         </javac>
         <copy todir="${classes.dir}">
-            <fileset dir="${src.dir}" excludes="**/*.java"/>
+            <fileset dir="${src.dir}">
+                <exclude name="**/*.java"/>
+                <exclude name="**/*.swp"/>
+            </fileset>
         </copy>
     </target>
 
     <target name="jar" depends="compile">
         <mkdir dir="${jar.dir}"/>
-        <jar destfile="${jar.dir}/${ant.project.name}.jar" basedir="${classes.dir}"/>
+        <jar destfile="${jar.dir}/${ant.project.name}.jar"
+            basedir="${classes.dir}"/>
         <copy todir="${jar.dir}">
             <fileset dir="${lib.dir}" includes="**/*.jar" />
         </copy>
