@@ -18,9 +18,24 @@ import java.util.stream.Stream;
 
 public class Scanner {
 
+    // VisibleForTesting
+    static ClassLoader cl = Scanner.class.getClassLoader();
+
     private static Predicate<String> implementsInterface(Class<?> clazz) {
-        return propagatingPred(className ->
-            clazz.isAssignableFrom(Class.forName(className)));
+        ClassLoader classLoader = cl; // capture for save of thread-safety
+        return className -> {
+            try {
+                return clazz.isAssignableFrom(Class.forName(className, false, classLoader));
+            } catch (ClassNotFoundException e) {
+                // This should not happen, all classes should exist on the
+                // classpath
+                throw new RuntimeException(e);
+            } catch (NoClassDefFoundError err) {
+                // We get a NoClassDefFoundError when attempting to do this for
+                // classes in bcprov signed security provider jar
+                return true;
+            }
+        };
     }
 
     private static String toClassName(String pathName) {
@@ -47,7 +62,6 @@ public class Scanner {
     }
 
     private static Stream<String> apps() {
-        ClassLoader cl = Scanner.class.getClassLoader();
         if (cl instanceof URLClassLoader) {
             URLClassLoader ucl = (URLClassLoader) cl;
 

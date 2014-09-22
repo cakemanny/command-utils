@@ -1,10 +1,39 @@
 <?xml version="1.0"?>
-<project name="Command" default="compile" basedir=".">
+<project xmlns:ivy="antlib:org.apache.ivy.ant"
+        name="Command" default="compile" basedir=".">
+
     <property name="src.dir" value="src"/>
     <property name="build.dir" value="build"/>
     <property name="classes.dir" value="${build.dir}/classes"/>
     <property name="jar.dir" value="${build.dir}/jar"/>
     <property name="lib.dir" value="lib"/>
+    <property name="test.src.dir" value="test"/>
+    <property name="test.classes.dir" value="${build.dir}/test-classes"/>
+    <property name="test.report.dir" value="test-reports"/>
+
+    <!-- ivy autom download -->
+    <property name="ivy.install.version" value="2.4.0-rc1" />
+    <condition property="ivy.home" value="${env.IVY_HOME}">
+      <isset property="env.IVY_HOME" />
+    </condition>
+    <property name="ivy.home" value="${user.home}/.ant" />
+    <property name="ivy.jar.dir" value="${ivy.home}/lib" />
+    <property name="ivy.jar.file" value="${ivy.jar.dir}/ivy-${ivy.install.version}.jar" />
+
+    <target name="download-ivy" unless="offline">
+        <mkdir dir="${ivy.jar.dir}"/>
+        <!-- download Ivy from web site so that it can be used even without any special installation -->
+        <get src="http://repo2.maven.org/maven2/org/apache/ivy/ivy/${ivy.install.version}/ivy-${ivy.install.version}.jar"
+            dest="${ivy.jar.file}" usetimestamp="true"/>
+    </target>
+
+    <target name="init-ivy" depends="download-ivy">
+        <path id="ivy.lib.path">
+            <fileset dir="${ivy.jar.dir}" includes="*.jar"/>
+        </path>
+        <taskdef resource="org/apache/ivy/ant/antlib.xml"
+            uri="antlib:org.apache.ivy.ant" classpathref="ivy.lib.path"/>
+    </target>
 
     <!-- ====== Our configuration ====== -->
 
@@ -15,6 +44,10 @@
         </fileset>
     </path>
 
+    <target name="echo">
+        <echoproperties/>
+    </target>
+
     <target name="clean">
         <delete dir="${build.dir}"/>
     </target>
@@ -22,7 +55,7 @@
     <target name="compile">
         <mkdir dir="${lib.dir}"/>
         <mkdir dir="${classes.dir}"/>
-        <javac source="1.8"
+        <javac source="1.8" target="1.8"
             srcdir="${src.dir}"
             destdir="${classes.dir}"
             includeantruntime="false"
@@ -38,7 +71,52 @@
         </copy>
     </target>
 
-    <target name="jar" depends="compile">
+    <target name="test-resolve" depends="init-ivy">
+        <ivy:resolve />
+        <ivy:cachepath pathid="test.deps.classpath" conf="test"/>
+    </target>
+
+    <path id="test.classpath">
+        <pathelement location="${test.classes.dir}" />
+    </path>
+
+    <target name="test-compile" depends="test-resolve">
+        <mkdir dir="${test.classes.dir}"/>
+        <javac source="1.8" target="1.8"
+            srcdir="${test.src.dir}"
+            destdir="${test.classes.dir}"
+            includeantruntime="false"
+            debug="true">
+            <classpath refid="Command.classpath"/>
+            <classpath refid="test.deps.classpath"/>
+            <classpath refid="test.classpath"/>
+            <compilerarg value="-Xlint:all"/>
+        </javac>
+        <copy todir="${test.classes.dir}">
+            <fileset dir="${test.src.dir}">
+                <exclude name="**/*.java"/>
+                <exclude name="**/*.swp"/>
+            </fileset>
+        </copy>
+    </target>
+
+    <target name="test" depends="compile,test-compile">
+        <junit fork="yes" forkmode="once" printsummary="true">
+            <classpath refid="Command.classpath"/>
+            <classpath refid="test.deps.classpath"/>
+            <classpath refid="test.classpath"/>
+
+            <formatter type="plain"/>
+
+            <batchtest todir="${test.report.dir}">
+                <fileset dir="${test.src.dir}">
+                    <include name="**/*Test.java"/>
+                </fileset>
+            </batchtest>
+        </junit>
+    </target>
+
+    <target name="jar" depends="compile,test">
         <mkdir dir="${jar.dir}"/>
         <jar destfile="${jar.dir}/${ant.project.name}.jar"
             basedir="${classes.dir}"/>

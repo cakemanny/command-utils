@@ -6,7 +6,6 @@ import java.io.File;
  * An example of how to use the App class.
  * <p>
  * How to run: java -cp ".[:;]Command.jar" -Dprog.name=Example \
- *                  -Dprog.className=com.cakemanny.app.Example \
  *                  com.cakemanny.app.App
  *
  * @author Daniel Golding
